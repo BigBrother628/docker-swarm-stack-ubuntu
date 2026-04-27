@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  app:
+    image: ubuntu:22.04
+    command: sleep infinity
+    environment:
+      - HOSTNAME={{.Node.Hostname}}
+      - POSTGRES_HOST=db
+      - REDIS_HOST=redis
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.labels.SERVERTYPE == worker
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 500M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "1"
+    volumes:
+      - ./app_logs:/var/log/app
+    networks:
+      - db-postgres-net
+      - ds-redis-net
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: password
+    networks:
+      - db-postgres-net
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - ds-redis-net
+
+networks:
+  db-postgres-net:
+    driver: overlay
+  ds-redis-net:
+    driver: overlay
